@@ -113,7 +113,7 @@ export default function Home() {
                                     disabled={isFetchingNextPage}
                                     className="bg-button text-white px-8 py-3 rounded-md hover:opacity-80 disabled:opacity-50 transition-opacity"
                                 >
-                                    {isFetchingNextPage ? 'Carregando...' : 'Carregar mais'}
+                                    {isFetchingNextPage ? 'A carregar...' : 'Carregar mais'}
                                 </button>
                             </div>
                         )}
