@@ -14,6 +14,17 @@ const Create = () => {
   })
 }
 
+const Delete = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteTransaction,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+    },
+  });
+};
+
 const ListAll = () => {
   return useQuery({ queryKey: [QUERY_KEY], queryFn: getTransactions})
 }
@@ -21,5 +32,8 @@ const ListAll = () => {
 export const useTransaction = {
     Create,
     ListAll,
-}
+    Delete, 
+};
+
+
 
