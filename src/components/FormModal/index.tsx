@@ -1,114 +1,152 @@
-import { date, InferType, number, object, string } from "yup";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import * as yup from "yup";
+import { ITransaction, TransactionType } from "@/types/transaction";
 import { Input } from "../Form/Input";
 import { TransactionSwitcher } from "../TransactionSwitcher";
-import { ITransaction } from "@/types/transaction";
-import { useForm } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-// Validação do formulário
 
-export interface IFormModalProps {
-    formTitle: string;
-    closeModal: () => void;
-    addTransaction: (transaction: ITransaction) => void;
+interface ITransactionForm {
+  title: string;
+  price: number;
+  category: string;
+  type: TransactionType;
+  data: Date;
 }
-
-const transactionSchema = object({
-  title: string()
-    .required('O Título é obrigatório')
-    .min(5, 'O Título deve ter pelo menos 5 caracteres'),
-  type: string()
-    .required('O Tipo é obrigatório')
-    .oneOf(['INCOME', 'OUTCOME'], 'O Tipo deve ser "income" ou "outcome"'),
-  category: string()
-    .required('A Categoria é obrigatória'),
-  price: number()
-    .required('O Preço é obrigatório')
-    .positive('O preço deve ser um número positivo')
-    .min(0.01, 'O preço deve ser maior que zero'),
-  data: date()
-    .required('A Data é obrigatória')
-    .default(() => new Date())
-})
-
-type ITransactionForm = InferType<typeof transactionSchema>
 
 const transactionFormDefaultValues: ITransactionForm = {
-  title: '',
-  type: 'INCOME',
-  category: '',
+  title: "",
   price: 0,
-  data: new Date()
+  category: "",
+  type: "INCOME",
+  data: new Date(),
+};
+
+const transactionSchema = yup.object().shape({
+  title: yup.string().required("Título é obrigatório"),
+  price: yup
+    .number()
+    .typeError("Preço deve ser um número")
+    .positive("Preço deve ser positivo")
+    .required("Preço é obrigatório"),
+  category: yup.string().required("Categoria é obrigatória"),
+  type: yup
+    .mixed<TransactionType>()
+    .oneOf(["INCOME", "OUTCOME"])
+    .required("Tipo é obrigatório"),
+  data: yup.date().required("Data é obrigatória"),
+});
+
+export interface IFormModalProps {
+  formTitle: string;
+  closeModal: () => void;
+  addTransaction: (transaction: ITransaction) => void;
+  updateTransaction?: (transaction: ITransaction) => void;
+  transactionToEdit?: ITransaction | null;
 }
 
-type TransactionType = 'INCOME' | 'OUTCOME';
+export function FormModal({
+  formTitle,
+  closeModal,
+  addTransaction,
+  updateTransaction,
+  transactionToEdit,
+}: IFormModalProps) {
+  const {
+    handleSubmit,
+    setValue,
+    watch,
+    register,
+    formState: { errors },
+    reset,
+  } = useForm<ITransactionForm>({
+    defaultValues: transactionFormDefaultValues,
+    resolver: yupResolver(transactionSchema),
+  });
 
+  const transactionType = watch("type");
 
-export function FormModal({formTitle, closeModal, addTransaction}: IFormModalProps){
-    // Função para lidar com o envio do formulário
+  useEffect(() => {
+    if (transactionToEdit) {
+      reset({
+        ...transactionToEdit,
+        price: transactionToEdit.price,
+        data: new Date(transactionToEdit.data),
+      });
+    }
+  }, [transactionToEdit, reset]);
 
-    const {
-      handleSubmit,
-      setValue,
-      watch,
-      register,
-      formState: { errors }
-    } = useForm<ITransactionForm>({
-      defaultValues: transactionFormDefaultValues,
-      resolver: yupResolver(transactionSchema)
-    })
-
-    const handleSetType = (type: 'INCOME' | 'OUTCOME') => {
-      setValue('type', type);
+  const onSubmit = (data: ITransactionForm) => {
+    const transactionData = {
+        ...data,
+        price: Number(data.price) // Garante que o preço seja um número
     }
 
-    const type = watch('type', 'INCOME');
-
-    const onSubmit = (data: ITransactionForm) => {
-      addTransaction(data as ITransaction);
-      closeModal();
+    if (transactionToEdit) {
+      updateTransaction?.({ ...transactionData, id: transactionToEdit.id } as ITransaction);
+    } else {
+      addTransaction(transactionData as ITransaction);
     }
-    
+    closeModal();
+  };
 
-    return (
-        <div className="relative z-10" aria-labelledby="modal-title" role="dialog" aria-modal="true"> 
-      <div className="fixed inset-0 bg-gray-500 opacity-75 transition-opacity" aria-hidden="true"></div>
-
-  <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
-    <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">     
-      <div className="relative transform overflow-hidden rounded-lg bg-modal text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
-        {/* Botão de fechamento "X" */}
-        <button 
-          type="button" 
-          className="absolute top-0 right-0 mt-4 mr-4 text-gray-400 hover:text-gray-600" 
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="relative p-8 bg-background rounded-lg shadow-lg w-full max-w-lg">
+        <button
           onClick={closeModal}
-          aria-label="Fechar">
-          <span className="text-2xl">&times;</span>
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
         </button>
-        <div className="bg-modal px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
-          <div className="sm:flex sm:items-start">            
-            <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-              <h1 className="font-semibold leading-9 text-title text-2xl" id="modal-title">{formTitle}</h1>              
-            </div>
-          </div>
-        </div>
-        <form className="flex flex-col gap-4 px-12 mt-4 mb-6" onSubmit={handleSubmit(onSubmit)}>            
-            <Input type="text" placeholder="Título" {...register("title")}/>
-            {errors.title && <span className="text-red-500">{errors.title.message}</span>}            
-            <Input type="number" placeholder="Preço" {...register("price")}/>    
-            {errors.price && <span className="text-red-500">{errors.price.message}</span>}
-            <TransactionSwitcher setType={handleSetType} type={type as TransactionType}/>
-            {errors.type && <span className="text-red-500">{errors.type.message}</span>}
-            <Input type="text" placeholder="Categoria" {...register("category")} />
-            {errors.category && <span className="text-red-500">{errors.category.message}</span>}
-            
-            <div className="bg-modal px-12 py-3 flex sm:flex-row-reverse w-full mb-11">          
-              <button type="submit" className="mt-3 w-full justify-center rounded-md bg-income text-white px-3 py-5 text-normal font-semibold shadow-sm hover:opacity-80 sm:mt-0">Confirmar</button>
-            </div>
+
+        <h2 className="text-2xl font-bold mb-6 text-title">{formTitle}</h2>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <Input
+            placeholder="Título"
+            {...register("title")}
+            error={errors.title?.message}
+          />
+          <Input
+            placeholder="Preço"
+            type="number"
+            step="0.01"
+            {...register("price")}
+            error={errors.price?.message}
+          />
+          <Input
+            placeholder="Categoria"
+            {...register("category")}
+            error={errors.category?.message}
+          />
+
+          <TransactionSwitcher
+            value={transactionType}
+            onChange={(value) => setValue("type", value)}
+          />
+
+          <button
+            type="submit"
+            className="w-full bg-button text-white py-3 rounded-md hover:opacity-90 transition-opacity"
+          >
+            {transactionToEdit ? 'Salvar Alterações' : 'Cadastrar'}
+          </button>
         </form>
-        
       </div>
     </div>
-  </div>
-</div>
-    )
+  );
 }
