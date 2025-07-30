@@ -28,3 +28,13 @@ export async function deleteTransaction(transactionId: string) {
         throw new Error("Erro ao excluir transação: " + error);
     }
 }
+
+export async function updateTransaction(transaction: ITransaction) {
+    try {
+        const response = await api.patch(`/transaction/${transaction.id}`, transaction);
+        toast.success("Transação atualizada com sucesso!");
+        return response.data;
+    } catch (error) {
+        throw new Error("Erro ao atualizar transação: " + error);
+    }
+}
